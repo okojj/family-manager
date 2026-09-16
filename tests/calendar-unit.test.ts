@@ -1,0 +1,14 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { CALENDAR_SCOPES, mapGoogleEvent, seal, unseal, syncWindow } from '../services/api/src/google-calendar.js';
+const key='a'.repeat(64);
+test('calendar scopes grant read access only',()=>{assert.equal(CALENDAR_SCOPES.length,2);assert.ok(CALENDAR_SCOPES.every(s=>s.endsWith('.readonly')));});
+test('refresh token encryption authenticates ciphertext and key',()=>{const a=seal('private-refresh-token',key),b=seal('private-refresh-token',key);assert.notEqual(a,b);assert.ok(!a.includes('private-refresh-token'));assert.equal(unseal(a,key),'private-refresh-token');assert.throws(()=>unseal(a,'b'.repeat(64)));assert.throws(()=>seal('token','invalid'));});
+test('cancelled Google instances are excluded',()=>{assert.equal(mapGoogleEvent({id:'a',status:'cancelled'},'family','calendar'),null);});
+test('all-day events preserve local date and exclusive end',()=>{const e=mapGoogleEvent({id:'a',start:{date:'2026-09-14'},end:{date:'2026-09-17'}},'family','calendar')!;assert.equal(e.date,'2026-09-14');assert.equal(e.endDate,'2026-09-16');assert.equal(e.allDay,true);assert.equal(e.time,'');});
+test('UTC timed event is displayed in Seoul and spans midnight',()=>{const e=mapGoogleEvent({id:'b',start:{dateTime:'2026-09-14T14:00:00Z'},end:{dateTime:'2026-09-14T16:00:00Z'}},'family','calendar')!;assert.equal(e.date,'2026-09-14');assert.equal(e.time,'23:00');assert.equal(e.endDate,'2026-09-15');});
+test('event ending at midnight does not occupy next day',()=>{const e=mapGoogleEvent({id:'b',start:{dateTime:'2026-09-14T23:00:00+09:00'},end:{dateTime:'2026-09-15T00:00:00+09:00'}},'family','calendar')!;assert.equal(e.endDate,'2026-09-14');});
+test('stable imported IDs are namespaced by family and calendar',()=>{const v={id:'same',start:{date:'2026-09-14'},end:{date:'2026-09-15'}};assert.equal(mapGoogleEvent(v,'f','a')!.id,mapGoogleEvent(v,'f','a')!.id);assert.notEqual(mapGoogleEvent(v,'f','a')!.id,mapGoogleEvent(v,'f','b')!.id);assert.notEqual(mapGoogleEvent(v,'f','a')!.id,mapGoogleEvent(v,'g','a')!.id);});
+test('unsafe remote links are not surfaced',()=>{const v={id:'same',start:{date:'2026-09-14'},end:{date:'2026-09-15'},htmlLink:'javascript:alert(1)'};assert.equal(mapGoogleEvent(v,'f','a')!.htmlLink,null);});
+test('malformed events abort a snapshot rather than silently dropping entries',()=>{assert.throws(()=>mapGoogleEvent({id:'bad'},'f','a'));assert.throws(()=>mapGoogleEvent({id:'bad',start:{dateTime:'bad'},end:{dateTime:'bad'}},'f','a'));});
+test('snapshot window is bounded to 90 past days and 365 future days',()=>{const now=new Date('2026-09-14T00:00:00Z'),w=syncWindow(now);assert.equal(+now-Date.parse(w.min),90*86400000);assert.equal(Date.parse(w.max)-+now,365*86400000);});

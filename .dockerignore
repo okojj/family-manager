@@ -1,0 +1,10 @@
+node_modules
+.git
+.idea
+.codex
+.agents
+dist
+.env
+.env.*
+*.log
+.runtime

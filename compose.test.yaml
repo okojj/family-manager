@@ -1,0 +1,20 @@
+# Isolated development database. Never points at the existing family database.
+services:
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "127.0.0.1:33316:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${TEST_DB_ROOT_PASSWORD:?Set in .env}
+      MYSQL_DATABASE: demo_myfam
+      MYSQL_USER: family_app
+      MYSQL_PASSWORD: ${TEST_DB_PASSWORD:?Set in .env}
+    volumes:
+      - myfam_test_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+volumes:
+  myfam_test_mysql:

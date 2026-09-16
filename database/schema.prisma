@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "mysql"
+  url = env("DATABASE_URL")
+}
+model Family {
+  id String @id @default(uuid()) @db.Char(36)
+  name String @db.VarChar(80)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+}
+model User {
+  id String @id @default(uuid()) @db.Char(36)
+  googleSub String @unique @db.VarChar(255)
+  email String @db.VarChar(255)
+  name String @db.VarChar(80)
+  familyId String? @db.Char(36)
+  role String @default("UNASSIGNED") @db.VarChar(20)
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  @@index([familyId])
+}
+model Invitation {
+  id String @id @default(uuid()) @db.Char(36)
+  tokenHash String @unique @db.Char(64)
+  familyId String @db.Char(36)
+  role String @db.VarChar(20)
+  email String @db.VarChar(255)
+  name String @db.VarChar(80)
+  expiresAt DateTime @db.DateTime(3)
+  consumedAt DateTime? @db.DateTime(3)
+}
+model Session {
+  tokenHash String @id @db.Char(64)
+  userId String @db.Char(36)
+  csrf String @db.Char(64)
+  expiresAt DateTime @db.DateTime(3)
+}
+model LoginChallenge {
+  tokenHash String @id @db.Char(64)
+  nonce String @db.Char(64)
+  expiresAt DateTime @db.DateTime(3)
+}
+model MissionTemplate {
+  id String @id @default(uuid()) @db.Char(36)
+  familyId String @db.Char(36)
+  title String @db.VarChar(120)
+  description String @db.VarChar(500)
+  weekdays String @default("1,2,3,4,5,6,0") @db.VarChar(20)
+  dueTime String @default("23:59") @db.VarChar(5)
+  reward Int
+  penalty Int
+  active Boolean @default(true)
+}
+model Mission {
+  id String @id @default(uuid()) @db.Char(36)
+  familyId String @db.Char(36)
+  userId String @db.Char(36)
+  templateId String @db.Char(36)
+  date String @db.Char(10)
+  title String @db.VarChar(120)
+  description String @db.VarChar(500)
+  dueTime String @db.VarChar(5)
+  reward Int
+  penalty Int
+  status String @default("OPEN") @db.VarChar(24)
+  note String @default("") @db.VarChar(500)
+  version Int @default(0)
+  submittedAt DateTime? @db.DateTime(3)
+  @@unique([templateId, userId, date])
+  @@index([familyId, date, status])
+}
+model Wallet {
+  userId String @id @db.Char(36)
+  familyId String @db.Char(36)
+  balance Int @default(0)
+  held Int @default(0)
+}
+model PointEntry {
+  id String @id @default(uuid()) @db.Char(36)
+  familyId String @db.Char(36)
+  userId String @db.Char(36)
+  points Int
+  kind String @db.VarChar(24)
+  title String @db.VarChar(150)
+  sourceKey String @unique @db.VarChar(191)
+  actorId String @db.Char(36)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  @@index([userId, createdAt])
+}
+model Redemption {
+  id String @id @default(uuid()) @db.Char(36)
+  familyId String @db.Char(36)
+  userId String @db.Char(36)
+  points Int
+  rate Int @default(100)
+  status String @default("REQUESTED") @db.VarChar(20)
+  payingParentId String? @db.Char(36)
+  requestKey String @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  paidAt DateTime? @db.DateTime(3)
+  @@index([familyId, status])
+}
+model Event {
+  id String @id @default(uuid()) @db.Char(36)
+  familyId String @db.Char(36)
+  ownerId String @db.Char(36)
+  title String @db.VarChar(120)
+  date String @db.Char(10)
+  time String @db.VarChar(5)
+  kind String @default("EVENT") @db.VarChar(20)
+  note String @default("") @db.VarChar(500)
+  requestKey String @unique @db.VarChar(100)
+  @@index([familyId, date])
+}
+model Notification {
+  id String @id @default(uuid()) @db.Char(36)
+  userId String @db.Char(36)
+  title String @db.VarChar(180)
+  link String @db.VarChar(180)
+  readAt DateTime? @db.DateTime(3)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  @@index([userId, createdAt])
+}
+model AuditLog {
+  id String @id @default(uuid()) @db.Char(36)
+  familyId String @db.Char(36)
+  actorId String @db.Char(36)
+  action String @db.VarChar(40)
+  entityId String @db.Char(36)
+  note String @db.VarChar(500)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+}
+
+model GoogleCalendarConnection {
+  familyId String @id @db.Char(36)
+  ownerId String @db.Char(36)
+  refreshTokenEncrypted String @db.Text
+  calendarId String? @db.VarChar(1024)
+  calendarName String? @db.VarChar(255)
+  revision Int @default(0)
+  lastSyncedAt DateTime? @db.DateTime(3)
+  lastError String? @db.VarChar(255)
+  syncLease String? @db.Char(36)
+  syncLeaseUntil DateTime? @db.DateTime(3)
+}
+model CalendarOAuthState {
+  tokenHash String @id @db.Char(64)
+  userId String @db.Char(36)
+  familyId String @db.Char(36)
+  sessionHash String @db.Char(64)
+  verifier String @db.VarChar(128)
+  expiresAt DateTime @db.DateTime(3)
+}
+model GoogleCalendarEvent {
+  id String @id @db.Char(64)
+  familyId String @db.Char(36)
+  googleEventId String @db.VarChar(1024)
+  title String @db.VarChar(255)
+  date String @db.Char(10)
+  endDate String @db.Char(10)
+  time String @db.VarChar(5)
+  allDay Boolean
+  note String @db.Text
+  htmlLink String? @db.VarChar(2048)
+  @@index([familyId, date])
+}
