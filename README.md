@@ -1,4 +1,4 @@
-# 우리집 · MyFam
+# 우리집 · Family Manager
 
 Vue 3 웹앱 + Fastify API + MySQL 기반 가족 미션·포인트·일정 앱입니다. 웹을 먼저 개발하고 이후 Capacitor로 Android 기능을 연결합니다.
 
